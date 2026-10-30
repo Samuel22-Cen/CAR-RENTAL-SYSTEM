@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin - Cars</title>
+  <link rel="stylesheet" href="admin.css">
+<link rel="stylesheet" href="theme.css">
+
+  <!-- Theme apply -->
+  <script>
+  (function() {
+    const theme = localStorage.getItem("adminTheme") || "default";
+    document.addEventListener("DOMContentLoaded", () => {
+      if (theme === "dark") document.body.classList.add("dark-mode");
+      if (theme === "light") document.body.classList.add("light-mode");
+    });
+  })();
+  </script>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <!-- Your Firebase config -->
+  <script src="firebase.js"></script>
+
+  <!-- Security system -->
+  <script src="security.js"></script>
+<script src="admin_shared.js"></script>
+
+  <!-- Protect admin page AFTER Firebase loads -->
+  <script>
+      Security.protectAdminPage();
+  </script>
+
+  <style>
+    .sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 240px;
+  height: 100vh;
+}
+
+    .car-table {
+  width: 100%;
+  max-width: none;
+}
+.content {
+  margin-left: 240px;              /* aligns with sidebar */
+  width: calc(100% - 240px);       /* makes content full width */
+  padding: 30px 30px 30px 20px;    /* clean spacing */
+  font-family: 'Inter', sans-serif;
+  box-sizing: border-box;          /* prevents shrinking */
+}
+
+/* Add Car Button */
+.add-btn {
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  transition: 0.25s;
+}
+
+.add-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(30,64,175,0.35);
+}
+
+/* Table Styling */
+.car-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  background: rgba(255,255,255,0.6);
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.car-table th {
+  background: #1e3a8a;
+  color: white;
+  padding: 14px;
+  font-size: 15px;
+  text-align: left;
+}
+
+.car-table td {
+  padding: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+.car-table tr:hover {
+  background: rgba(59,130,246,0.08);
+}
+
+/* Action Buttons */
+.action-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+.edit-btn {
+  background: #2563eb;
+  color: white;
+}
+
+.edit-btn:hover {
+  background: #1d4ed8;
+}
+
+.delete-btn {
+  background: #dc2626;
+  color: white;
+}
+
+.delete-btn:hover {
+  background: #b91c1c;
+}
+
+/* Car Image */
+.car-img {
+  width: 70px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+}
+
+/* Edit Modal */
+.edit-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  width: 320px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  display: none;
+  opacity: 0;
+  transition: 0.25s ease;
+  z-index: 1000;
+}
+
+.edit-modal.show {
+  display: block;
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.modal-title {
+  font-size: 20px;
+  margin-bottom: 15px;
+  color: #1e3a8a;
+}
+
+.modal-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.save-btn {
+  background: #2563eb;
+  color: white;
+}
+
+.save-btn:hover {
+  background: #1d4ed8;
+}
+
+.cancel-btn {
+  background: #ef4444;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background: #dc2626;
+}
+
+  </style>
+</head>
+
+<body>
+
+<div class="sidebar">
+  <h2>Admin Panel</h2>
+
+  <a href="admin.html">Dashboard</a>
+  <a href="admin_bookings.html">Bookings</a>
+  <a href="admin_users.html">Users</a>
+  <a href="admin_cars.html" class="active">Cars</a>
+  <a href="admin_revenue.html">Revenue</a>
+  <a href="admin_settings.html">Settings</a>
+
+  <a href="admin_notifications.html" class="notif-btn">
+    <span class="notif-icon">🔔</span>
+    Notifications
+    <span id="notif-badge" class="notif-badge">0</span>
+  </a>
+
+  <a class="signout-btn" onclick="signOut()">Sign Out</a>
+</div>
+
+
+<!-- ⭐⭐ FIXED CONTENT SECTION ⭐⭐ -->
+<div class="content">
+
+  <h1>Manage Cars</h1>
+
+  <!-- Add Car Section -->
+  <div class="glass-card">
+    <h2>Add New Car</h2>
+
+    <div style="display:flex; gap:15px; flex-wrap:wrap;">
+      <input id="carName" type="text" class="glass-input" placeholder="Car Name" style="flex:1;">
+      <input id="carPrice" type="number" class="glass-input" placeholder="Price per day" style="width:180px;">
+      <input id="carImage" type="text" class="glass-input" placeholder="Image URL" style="flex:1;">
+      <button class="add-btn" onclick="addCar()">Add Car</button>
+    </div>
+  </div>
+
+  <!-- Car List -->
+  <h2>Car List</h2>
+
+  <table class="car-table">
+    <thead>
+      <tr>
+        <th>Image</th>
+        <th>Name</th>
+        <th>Price/Day</th>
+        <th>Available</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="carsTable"></tbody>
+  </table>
+
+</div>
+
+
+<!-- Modal stays the same -->
+<div id="editModal" class="edit-modal">
+  <h2 class="modal-title">Edit Car</h2>
+
+  <input id="editName" class="glass-input" placeholder="Car Name" style="width:100%;margin-bottom:10px;padding:10px;border-radius:8px;border:1px solid #ccc;">
+  <input id="editPrice" class="glass-input" placeholder="Price Per Day" style="width:100%;margin-bottom:10px;padding:10px;border-radius:8px;border:1px solid #ccc;">
+  <input id="editImage" class="glass-input" placeholder="Image URL" style="width:100%;margin-bottom:10px;padding:10px;border-radius:8px;border:1px solid #ccc;">
+  <input id="editEngine" class="glass-input" placeholder="Engine (e.g. 3.9L V8)" style="width:100%;margin-bottom:10px;padding:10px;border-radius:8px;border:1px solid #ccc;">
+  <input id="editFuel" class="glass-input" placeholder="Fuel Type (e.g. Petrol)" style="width:100%;margin-bottom:10px;padding:10px;border-radius:8px;border:1px solid #ccc;">
+  <input id="editSeats" class="glass-input" placeholder="Seats (e.g. 2)" style="width:100%;margin-bottom:10px;padding:10px;border-radius:8px;border:1px solid #ccc;">
+  <input id="editYear" class="glass-input" placeholder="Year (e.g. 2020)" style="width:100%;margin-bottom:10px;padding:10px;border-radius:8px;border:1px solid #ccc;">
+<select id="editAvailable" style="width:100%;margin-bottom:10px;padding:10px;border-radius:8px;border:1px solid #ccc;">
+  <option value="true">Available</option>
+  <option value="false">Unavailable</option>
+</select>
+
+<select id="editType" style="width:100%;margin-bottom:10px;padding:10px;border-radius:8px;border:1px solid #ccc;">
+  <option value="Economy">Economy</option>
+  <option value="luxury">Luxury</option>
+  <option value="sport">Sport</option>
+  <option value="fastest">Fastest</option>
+  <option value="electric">Electric</option>
+  <option value="comfortable">Comfortable</option>
+  <option value="SUV">SUV</option>
+  <option value="hybrid">Hybrid</option>
+  <option value="hypercar">Hypercar</option>
+  <option value="ultra-luxury">Ultra Luxury</option>
+</select>
+
+  <button class="modal-btn save-btn" onclick="saveCarChanges()">Save Changes</button>
+  <button class="modal-btn cancel-btn" onclick="closeEdit()">Cancel</button>
+</div>
+
+
+</body>
+
+
+<!-- Admin logic -->
+<script src="admin.js"></script>
+
+<script>
+let editCarId = null; // store Firestore doc ID instead of array index
+
+function signOut() {
+  auth.signOut().then(() => {
+    localStorage.removeItem("loggedInUser");
+    window.location.href = "index.html";
+  });
+}
+
+// ── Load Cars from Firestore ──────────────────────────
+function loadCars() {
+  const tbody = document.getElementById("carsTable");
+
+  db.collection("cars").onSnapshot(snapshot => {
+    tbody.innerHTML = "";
+
+    if (snapshot.empty) {
+      tbody.innerHTML = `<tr><td colspan="5">No cars found.</td></tr>`;
+      return;
+    }
+
+    snapshot.forEach(doc => {
+      const car = doc.data();
+
+      tbody.innerHTML += `
+        <tr>
+          <td><img src="${car.image?.exterior || ''}" class="car-img">
+          <td>${Security.sanitize(car.name || "")}</td>
+          <td>$${car.pricePerDay}</td>
+          <td>
+            <span style="
+              padding:6px 12px;
+              border-radius:8px;
+              font-weight:600;
+              color:white;
+              background:${car.available ? '#16a34a' : '#dc2626'};
+            ">
+              ${car.available ? 'Yes' : 'No'}
+            </span>
+          </td>
+          <td>
+            <button class="action-btn edit-btn"
+              onclick="openEdit('${doc.id}', '${Security.sanitize(car.name)}', ${car.pricePerDay}, '${car.imageUrl || ''}', ${car.available})">
+              Edit
+            </button>
+
+            <button class="action-btn delete-btn"
+              onclick="deleteCar('${doc.id}')">
+              Delete
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+  });
+}
+
+
+// ── Add Car to Firestore ──────────────────────────────
+async function addCar() {
+  const name  = document.getElementById("carName").value.trim();
+  const price = document.getElementById("carPrice").value.trim();
+  const image = document.getElementById("carImage").value.trim();
+
+  if (!name || !price || !image) {
+    alert("Please fill all fields.");
+    return;
+  }
+
+  try {
+    await db.collection("cars").add({
+      name:        Security.sanitize(name),
+      pricePerDay: Number(price),
+      imageUrl:    image,
+      available:   true
+    });
+
+    alert("Car added!");
+    document.getElementById("carName").value  = "";
+    document.getElementById("carPrice").value = "";
+    document.getElementById("carImage").value = "";
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+}
+
+// ── Open Edit Modal ───────────────────────────────────
+let currentEditId = null;
+
+function openEdit(id) {
+  currentEditId = id;
+
+  db.collection("cars").doc(id).get().then(doc => {
+    const car = doc.data();
+
+    document.getElementById("editName").value = car.name;
+    document.getElementById("editPrice").value = car.pricePerDay;
+    document.getElementById("editImage").value = car.image?.exterior || "";
+
+    document.getElementById("editEngine").value = car.engine || "";
+    document.getElementById("editFuel").value = car.fuel || "";
+    document.getElementById("editSeats").value = car.seats || "";
+    document.getElementById("editYear").value = car.year || "";
+    document.getElementById("editAvailable").value = car.available ? "true" : "false";
+    document.getElementById("editType").value = car.type || "economy";
+  });
+
+  document.getElementById("editModal").classList.add("show");
+}
+
+
+// ── Save Edited Car to Firestore ──────────────────────
+function saveCarChanges() {
+  const updatedCar = {
+    name: document.getElementById("editName").value,
+    pricePerDay: Number(document.getElementById("editPrice").value),
+
+    image: {
+      exterior: document.getElementById("editImage").value
+    },
+
+    engine: document.getElementById("editEngine").value,
+    fuel: document.getElementById("editFuel").value,
+    seats: Number(document.getElementById("editSeats").value),
+    year: Number(document.getElementById("editYear").value),
+    available: document.getElementById("editAvailable").value === "true",
+    type: document.getElementById("editType").value,
+  };
+
+  db.collection("cars").doc(currentEditId).update(updatedCar).then(() => {
+    closeEdit();
+    loadCars(); // refresh table
+  });
+}
+
+
+// ── Delete Car from Firestore ─────────────────────────
+async function deleteCar(id) {
+  if (!confirm("Delete this car?")) return;
+
+  try {
+    await db.collection("cars").doc(id).delete();
+    alert("Car deleted.");
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+}
+
+function closeEdit() {
+  document.getElementById("editModal").classList.remove("show");
+  currentEditId = null;
+}
+
+// ── Init ──────────────────────────────────────────────
+loadCars();
+</script>
+
+</body>
+</html>

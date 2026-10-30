@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="stylesheet" href="theme.css">
+<script>
+(function() {
+  const theme = localStorage.getItem("adminTheme") || "default";
+  document.addEventListener("DOMContentLoaded", () => {
+    if (theme === "dark") document.body.classList.add("dark-mode");
+    if (theme === "light") document.body.classList.add("light-mode");
+  });
+})();
+</script>
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Luxury Car Rentals</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="firebase.js"></script>
+<script src="security.js"></script>
+
+<script>
+  if (typeof Security !== "undefined" && Security.protectCustomerPage) {
+    Security.protectCustomerPage();
+  } else {
+    setTimeout(() => {
+      if (typeof Security !== "undefined" && Security.protectCustomerPage) {
+        Security.protectCustomerPage();
+      }
+    }, 200);
+  }
+</script>
+
+<style>
+  :root {
+    --blue-1: #007bff;
+    --blue-2: #0056d6;
+    --card-bg: #ffffff;
+    --muted-bg: #eef4ff;
+    --accent: #28a745;
+    --danger: #dc3545;
+    --shadow: 0 6px 18px rgba(0,0,0,0.12);
+  }
+
+  * { box-sizing: border-box; transition: 0.25s ease; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    margin: 0;
+    background: var(--muted-bg);
+    color: #222;
+  }
+
+  header {
+    background: linear-gradient(135deg, var(--blue-1), var(--blue-2));
+    color: white;
+    padding: 18px 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+
+  header h1 { margin: 0; font-size: 26px; font-weight: 700; }
+  .header-right { display:flex; align-items:center; gap:15px; }
+
+  .notif-btn {
+    background: white;
+    padding: 8px 14px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    font-size: 16px;
+    color: var(--blue-1);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .notif-btn:hover { background: #eef2ff; transform: translateY(-2px); }
+
+  .notif-badge {
+    background: red;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 50%;
+    font-size: 12px;
+    display: inline-block;
+  }
+
+  .menu-dots { position: relative; cursor: pointer; display:flex; gap:4px; align-items:center; }
+  .menu-dots .dot { width:6px; height:6px; background:white; border-radius:50%; }
+  .menu-content {
+    position: absolute;
+    right: 0;
+    top: 36px;
+    background: white;
+    padding: 8px 0;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+    width: 180px;
+    display: none;
+    z-index: 50;
+    animation: fadeIn 0.18s ease;
+  }
+  .menu-content.show { display:block; }
+  .menu-content a {
+    display:block; padding:12px 16px; margin:4px 8px; border-radius:10px;
+    font-size:15px; font-weight:600; text-decoration:none; color:#333; cursor:pointer;
+  }
+  .menu-content a:first-child { background: linear-gradient(135deg,var(--blue-1),var(--blue-2)); color:white; }
+  .menu-content a:last-child { background: linear-gradient(135deg,var(--danger),#b52a36); color:white; }
+
+  /* Search Bar */
+  .search-bar {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 0 20px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .search-bar input {
+    flex: 1;
+    min-width: 200px;
+    padding: 12px 18px;
+    border-radius: 12px;
+    border: 2px solid #e0e0e0;
+    font-size: 15px;
+    outline: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    background: white;
+  }
+
+  .search-bar input:focus { border-color: #007bff; }
+
+  .search-bar select {
+    padding: 12px 18px;
+    border-radius: 12px;
+    border: 2px solid #e0e0e0;
+    font-size: 15px;
+    outline: none;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    cursor: pointer;
+    min-width: 160px;
+  }
+
+  .search-bar select:focus { border-color: #007bff; }
+
+  .search-bar .btn-search {
+    padding: 12px 24px;
+    background: linear-gradient(135deg,#007bff,#0056d6);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+  }
+
+  .search-bar .btn-search:hover { transform: translateY(-2px); }
+
+  .search-bar .btn-clear {
+    padding: 12px 20px;
+    background: white;
+    color: #666;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .search-bar .btn-clear:hover { border-color: #007bff; color: #007bff; }
+
+  /* Cars Grid */
+  .container { max-width:1200px; margin:0 auto; padding:0 20px; }
+  #cars { display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:22px; padding-bottom:40px; }
+
+  .car {
+    background: var(--card-bg);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 15px;
+    text-align: center;
+    animation: fadeIn 0.35s ease;
+  }
+  .car:hover { transform: translateY(-6px); box-shadow: 0 10px 25px rgba(0,0,0,0.12); }
+  .car img { width:100%; height:160px; object-fit:cover; border-radius:10px; }
+  .car h3 { margin:12px 0 6px; font-size:18px; color: var(--blue-1); }
+  .car p { margin:4px 0; font-size:14px; color:#444; }
+  .car button {
+    margin-top:10px; padding:10px 14px; background: var(--accent); color:white; border:none;
+    border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;
+  }
+  .car button:hover { background:#218838; }
+
+  .available { color: #16a34a; font-weight: 600; }
+  .unavailable { color: #dc2626; font-weight: 600; }
+
+  /* Chatbot */
+  #chatbot-button {
+    position: fixed; bottom: 25px; right: 25px; width:60px; height:60px;
+    background: linear-gradient(135deg,var(--blue-1),var(--blue-2)); color:white;
+    border-radius:50%; display:flex; justify-content:center; align-items:center;
+    font-size:28px; cursor:pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.35); z-index:9999;
+  }
+  #chatbot-button:hover { transform: scale(1.08); }
+
+  #chatbot-popup {
+    position: fixed; bottom: 100px; right: 25px; width:330px; max-width:90vw; height:430px;
+    background:white; border-radius:14px; box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+    display:flex; flex-direction:column; overflow:hidden; z-index:9999;
+    transform: translateY(20px); opacity:0; pointer-events:none; transition:0.28s ease;
+  }
+  #chatbot-popup.open { transform: translateY(0); opacity:1; pointer-events:auto; }
+  #chatbot-header {
+    background: linear-gradient(135deg,var(--blue-1),var(--blue-2)); color:white;
+    padding:12px; display:flex; justify-content:space-between; align-items:center; font-weight:700;
+  }
+  #chatbot-messages { flex:1; padding:10px; overflow-y:auto; background:#f4f6f9; }
+  .msg { padding:8px 12px; margin:6px 0; border-radius:12px; max-width:80%; font-size:14px; }
+  .msg.user { background: var(--blue-1); color:white; margin-left:auto; }
+  .msg.bot { background:#e3ecff; color:#222; }
+  #chatbot-input-area { display:flex; border-top:1px solid #ddd; padding:10px; gap:8px; }
+  #chatbot-input { flex:1; padding:10px; border-radius:8px; border:1px solid #ccc; outline:none; }
+  #chatbot-input-area button { padding:10px 14px; background:var(--blue-1); color:white; border:none; border-radius:8px; cursor:pointer; }
+
+  @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+  @media (max-width:600px) { header h1 { font-size:18px; } #cars { grid-template-columns: 1fr; } }
+  .available {
+  color: #16a34a !important;
+  font-weight: 600;
+}
+
+.unavailable {
+  color: #dc2626 !important;
+  font-weight: 600;
+}
+</style>
+</head>
+
+<body>
+  <header>
+    <h1>Luxury Car Rentals</h1>
+    <div class="header-right">
+      <a href="customer_notifications.html" class="notif-btn" title="Notifications">
+        <span class="notif-icon">🔔</span>
+        <span id="notif-badge" class="notif-badge" style="display:none;">0</span>
+      </a>
+      <div class="menu-dots" id="menuDots" aria-label="Menu">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="menu-content" id="menuDropdown">
+          <a href="bookings.html">My Bookings</a>
+          <a onclick="signOut()">Sign Out</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Search Bar -->
+  <div class="search-bar">
+    <input type="text" id="search" placeholder="🔍 Search cars...">
+    <select id="filter">
+  <option value="">All Categories</option>
+  <option value="Economy">🌿 Economy</option>
+  <option value="luxury">🥂 Luxury</option>
+  <option value="sport">🏁 Sport</option>
+  <option value="electric">🔋 Electric</option>
+  <option value="SUV">🚙 SUV</option>
+  <option value="hybrid">🔄 Hybrid</option>
+  <option value="hypercar">🔥 Hypercar</option>
+  <option value="ultra-luxury">👑 Ultra Luxury</option>
+</select>
+    <button class="btn-search" onclick="filterCars()">🔍 Search</button>
+    <button class="btn-clear" onclick="clearSearch()">✖ Clear</button>
+  </div>
+
+  <div class="container">
+    <div id="cars"></div>
+  </div>
+
+  <!-- Chatbot -->
+  <div id="chatbot-button" title="Chat">💬</div>
+  <div id="chatbot-popup" aria-hidden="true">
+    <div id="chatbot-header">
+      <div>Chat Assistant</div>
+      <button id="chatbot-close" aria-label="Close chat">✖</button>
+    </div>
+    <div id="chatbot-messages"></div>
+    <div id="chatbot-input-area">
+      <input type="text" id="chatbot-input" placeholder="Ask about cars..." />
+      <button id="chatbot-send">Send</button>
+    </div>
+  </div>
+
+<script>
+var loggedUser = JSON.parse(localStorage.getItem("loggedInUser"));
+
+function signOut() {
+  auth.signOut().then(() => {
+    localStorage.removeItem("loggedInUser");
+    window.location.href = "index.html";
+  });
+}
+
+document.getElementById("menuDots").addEventListener("click", (e) => {
+  e.stopPropagation();
+  document.getElementById("menuDropdown").classList.toggle("show");
+});
+document.addEventListener("click", () => {
+  document.getElementById("menuDropdown").classList.remove("show");
+});
+
+function updateCustomerNotifBadge() {
+  if (!loggedUser || !loggedUser.email) return;
+  db.collection("notifications")
+    .where("userEmail", "==", loggedUser.email)
+    .onSnapshot(snapshot => {
+      let count = 0;
+      snapshot.forEach(doc => {
+        let n = doc.data();
+        if (n.for === "customer" && n.status === "unread") count++;
+      });
+      const badge = document.getElementById("notif-badge");
+      if (!badge) return;
+      if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = "inline-block";
+      } else {
+        badge.style.display = "none";
+      }
+    });
+}
+
+let allCars = [];
+
+function loadCars() {
+  db.collection("cars").onSnapshot(snapshot => {
+    allCars = [];
+    snapshot.forEach(doc => {
+      allCars.push({ id: doc.id, ...doc.data() });
+    });
+    console.log("Cars loaded:", allCars.length, allCars.map(c => c.name));
+    renderCars(allCars);
+  });
+}
+
+function renderCars(list) {
+  const container = document.getElementById("cars");
+  container.innerHTML = "";
+
+  if (!list || list.length === 0) {
+    container.innerHTML = "<p style='text-align:center'>No cars available.</p>";
+    return;
+  }
+
+  list.forEach(car => {
+    const div = document.createElement("div");
+    div.className = "car";
+    div.innerHTML = `
+      <img src="${car.image?.exterior?.startsWith('http') ? car.image.exterior : '../' + (car.image?.exterior || 'image/placeholder.jpg')}"
+           alt="${car.name}"
+           onerror="this.src='../image/placeholder.jpg'">
+      <h3>${car.name}</h3>
+      <p>$${car.pricePerDay}/day</p>
+      <p>${car.type || "Luxury"}</p>
+      <p class="${car.available ? 'available' : 'unavailable'}">
+        ${car.available ? 'Available' : 'Unavailable'}
+      </p>
+      <button onclick="goToCar('${encodeURIComponent(car.name)}')">Get Details</button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function goToCar(encodedName) {
+  window.location.href = 'car.html?name=' + encodedName;
+}
+
+function filterCars() {
+  const term = document.getElementById("search").value.toLowerCase();
+  const type = document.getElementById("filter").value;
+  const filtered = allCars.filter(c =>
+    c.name.toLowerCase().includes(term) &&
+    (type === "" || c.type === type)
+  );
+  renderCars(filtered);
+}
+
+function clearSearch() {
+  document.getElementById("search").value = "";
+  document.getElementById("filter").value = "";
+  renderCars(allCars);
+}
+
+function escapeHtml(str) {
+  if (!str && str !== 0) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function findCar(text) {
+  const lower = text.toLowerCase().trim();
+  return allCars.find(c => {
+    const carNameLower = c.name.toLowerCase();
+    const carWords = carNameLower.split(" ");
+    return carNameLower.includes(lower) ||
+           lower.includes(carNameLower) ||
+           carWords.some(word => word.length > 3 && lower.includes(word));
+  });
+}
+
+function sendMessage() {
+  const input = document.getElementById("chatbot-input");
+  const messages = document.getElementById("chatbot-messages");
+  const text = input.value.trim();
+  if (text === "") return;
+
+  messages.innerHTML += `<div class="msg user">${escapeHtml(text)}</div>`;
+
+  const lower = text.toLowerCase();
+
+  // Wait for cars to load
+  if (allCars.length === 0) {
+    setTimeout(() => {
+      const msgDiv = document.createElement("div");
+      msgDiv.className = "msg bot";
+      msgDiv.innerHTML = "⏳ Still loading cars, please try again in a moment!";
+      messages.appendChild(msgDiv);
+      messages.scrollTop = messages.scrollHeight;
+    }, 250);
+    input.value = "";
+    return;
+  }
+
+  let reply = "🤖 I'm not sure about that! Try asking about a specific car, or type: <b>fastest, cheapest, luxury, sport, electric, suv, available</b>";
+
+  const foundCar = findCar(lower);
+
+  if (foundCar) {
+    reply = `
+      <div style="line-height:1.8">
+        <b style="font-size:15px">🚘 ${foundCar.name}</b><br>
+        📅 <b>Year:</b> ${foundCar.year || 'N/A'}<br>
+        🏷️ <b>Category:</b> ${foundCar.type || 'N/A'}<br>
+        💵 <b>Price:</b> $${foundCar.pricePerDay}/day<br>
+        ⚙️ <b>Engine:</b> ${foundCar.engine || 'N/A'}<br>
+        🛢️ <b>Fuel:</b> ${foundCar.fuel || 'N/A'}<br>
+        📊 <b>Consumption:</b> ${foundCar.Consumption || foundCar.consumption || 'N/A'}<br>
+        💺 <b>Seats:</b> ${foundCar.seats || 'N/A'}<br>
+        ${foundCar.available
+          ? '<span style="color:#16a34a">🟢 Available for booking</span>'
+          : '<span style="color:#dc2626">🔴 Currently unavailable</span>'}
+      </div>`;
+  }
+  else if (lower.includes("hello") || lower.includes("hi") || lower.includes("hey")) {
+    reply = "👋 Hey there! I'm your car assistant. Ask me about any car by name, or try:<br><b>fastest · cheapest · luxury · sport · electric · suv · available</b>";
+  }
+  else if (lower.includes("fastest")) {
+    const cars = allCars.filter(c => c.type === "fastest");
+    reply = "⚡ <b>Fastest Cars:</b><br>" + (cars.length > 0
+      ? cars.map(c => `• ${c.name} — $${c.pricePerDay}/day`).join("<br>")
+      : "Bugatti Chiron, Koenigsegg Jesko, McLaren Speedtail");
+  }
+  else if (lower.includes("cheapest") || lower.includes("cheap") || lower.includes("affordable")) {
+    const sorted = [...allCars].sort((a, b) => a.pricePerDay - b.pricePerDay).slice(0, 5);
+    reply = "💸 <b>Most Affordable:</b><br>" + sorted.map(c => `• ${c.name} — $${c.pricePerDay}/day`).join("<br>");
+  }
+  else if (lower.includes("expensive") || lower.includes("premium")) {
+    const sorted = [...allCars].sort((a, b) => b.pricePerDay - a.pricePerDay).slice(0, 5);
+    reply = "💎 <b>Premium Picks:</b><br>" + sorted.map(c => `• ${c.name} — $${c.pricePerDay}/day`).join("<br>");
+  }
+  else if (lower.includes("luxury")) {
+    const cars = allCars.filter(c => c.type === "luxury");
+    reply = "🥂 <b>Luxury Fleet:</b><br>" + (cars.length > 0
+      ? cars.map(c => `• ${c.name} — $${c.pricePerDay}/day`).join("<br>")
+      : "Rolls Royce Phantom, Bentley GT, Mercedes S-Class, BMW 7 Series");
+  }
+  else if (lower.includes("sport")) {
+    const cars = allCars.filter(c => c.type === "sport");
+    reply = "🏁 <b>Sport Cars:</b><br>" + (cars.length > 0
+      ? cars.map(c => `• ${c.name} — $${c.pricePerDay}/day`).join("<br>")
+      : "Porsche 911, Ford Mustang, Chevrolet Camaro, Ferrari 488");
+  }
+  else if (lower.includes("electric")) {
+    const cars = allCars.filter(c => c.type === "electric");
+    reply = "🔋 <b>Electric Cars:</b><br>" + (cars.length > 0
+      ? cars.map(c => `• ${c.name} — $${c.pricePerDay}/day`).join("<br>")
+      : "Tesla Model S, BMW i8, Audi e-tron, Nissan Leaf, Kia EV6");
+  }
+  else if (lower.includes("suv") || lower.includes("comfortable")) {
+    const cars = allCars.filter(c => c.type === "comfortable" || c.type === "suv");
+    reply = "🛻 <b>SUV & Comfortable:</b><br>" + (cars.length > 0
+      ? cars.map(c => `• ${c.name} — $${c.pricePerDay}/day`).join("<br>")
+      : "Volvo XC90, Toyota Highlander, Lexus RX, Mazda CX-9");
+  }
+  else if (lower.includes("economy")) {
+    const cars = allCars.filter(c => c.type === "economy");
+    reply = "🌿 <b>Economy Cars:</b><br>" + (cars.length > 0
+      ? cars.map(c => `• ${c.name} — $${c.pricePerDay}/day`).join("<br>")
+      : "Toyota Prius, Honda Civic, Ford Focus, Hyundai Elantra");
+  }
+  else if (lower.includes("available")) {
+    const cars = allCars.filter(c => c.available);
+    reply = cars.length > 0
+      ? "✅ <b>Available Now:</b><br>" + cars.map(c => `• ${c.name}`).join("<br>")
+      : "😔 No cars are currently available.";
+  }
+  else if (lower.includes("consumption") || lower.includes("fuel") || lower.includes("efficient")) {
+    const petrol = allCars.filter(c => c.fuel?.toLowerCase().includes("petrol"));
+    const diesel = allCars.filter(c => c.fuel?.toLowerCase().includes("diesel"));
+    const electric = allCars.filter(c => c.fuel?.toLowerCase().includes("electric"));
+    reply = `⛽ <b>By Fuel Type:</b><br>
+      🛢️ <b>Petrol:</b> ${petrol.map(c => c.name).join(", ") || "None"}<br>
+      ⚫ <b>Diesel:</b> ${diesel.map(c => c.name).join(", ") || "None"}<br>
+      🔋 <b>Electric:</b> ${electric.map(c => c.name).join(", ") || "None"}`;
+  }
+  else if (lower.includes("price") || lower.includes("cost") || lower.includes("how much")) {
+    const min = Math.min(...allCars.map(c => c.pricePerDay));
+    const max = Math.max(...allCars.map(c => c.pricePerDay));
+    reply = `💵 <b>Price Range:</b> $${min}/day — $${max}/day<br>Ask about a specific car for its exact price!`;
+  }
+  else if (lower.includes("seat")) {
+    const seatMatch = lower.match(/(\d+)\s*seat/);
+    if (seatMatch) {
+      const seatCount = parseInt(seatMatch[1]);
+      const cars = allCars.filter(c => c.seats == seatCount);
+      reply = cars.length > 0
+        ? `💺 <b>Cars with ${seatCount} seats:</b><br>` + cars.map(c => `• ${c.name}`).join("<br>")
+        : `😔 No cars found with exactly ${seatCount} seats.`;
+    } else {
+      reply = "💺 Tell me how many seats you need, e.g. <b>'5 seats'</b>!";
+    }
+  }
+  else if (lower.includes("all cars") || lower.includes("list") || lower.includes("show all")) {
+    reply = "🚗 <b>All Cars:</b><br>" + allCars.map(c => `• ${c.name} — $${c.pricePerDay}/day`).join("<br>");
+  }
+  else if (lower.includes("book") || lower.includes("reserve")) {
+    reply = "📋 To book a car:<br>1. Browse cars on the dashboard<br>2. Click <b>'Get Details'</b><br>3. Select your dates<br>4. Click <b>'Request Booking'</b>!";
+  }
+  else if (lower.includes("cancel")) {
+    reply = "❌ To cancel a booking:<br>Go to <b>Menu → My Bookings</b> and click <b>Cancel Booking</b>.";
+  }
+  else if (lower.includes("contact") || lower.includes("help") || lower.includes("support")) {
+    reply = "📞 Need help? Contact our support team or ask me anything about our cars and bookings!";
+  }
+
+  setTimeout(() => {
+    const msgDiv = document.createElement("div");
+    msgDiv.className = "msg bot";
+    msgDiv.innerHTML = reply;
+    messages.appendChild(msgDiv);
+    messages.scrollTop = messages.scrollHeight;
+  }, 250);
+
+  input.value = "";
+}
+
+document.getElementById("chatbot-button").addEventListener("click", () => {
+  document.getElementById("chatbot-popup").classList.toggle("open");
+});
+document.getElementById("chatbot-close").addEventListener("click", () => {
+  document.getElementById("chatbot-popup").classList.remove("open");
+});
+document.getElementById("chatbot-send").addEventListener("click", sendMessage);
+document.getElementById("chatbot-input").addEventListener("keypress", (e) => {
+  if (e.key === "Enter") sendMessage();
+});
+
+loadCars();
+updateCustomerNotifBadge();
+
+window.addEventListener('storage', (e) => {
+  if (e.key === 'notifications') {
+    updateCustomerNotifBadge();
+  }
+});
+</script>
+</body>
+</html>

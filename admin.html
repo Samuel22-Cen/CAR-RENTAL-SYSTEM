@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="theme.css">
+
+  <!-- Theme apply -->
+  <script>
+  (function() {
+    const theme = localStorage.getItem("adminTheme") || "default";
+    document.addEventListener("DOMContentLoaded", () => {
+      if (theme === "dark") document.body.classList.add("dark-mode");
+      if (theme === "light") document.body.classList.add("light-mode");
+    });
+  })();
+  </script>
+
+    <title>Admin Dashboard</title>
+</head>
+
+<body>
+
+<div class="sidebar">
+  <h2>Admin Panel</h2>
+  <a href="admin.html">Dashboard</a>
+  <a href="admin_bookings.html">Bookings</a>
+  <a href="admin_users.html">Users</a>
+  <a href="admin_cars.html">Cars</a>
+  <a href="admin_revenue.html">Revenue</a>
+  <a href="admin_settings.html">Settings</a>
+  <a href="admin_notifications.html" class="notif-btn">
+    <span class="notif-icon">🔔</span>
+    Notifications
+    <span id="notif-badge" class="notif-badge">0</span>
+  </a>
+  <a class="signout-btn" onclick="signOut()">Sign Out</a>
+</div>
+
+<div class="content">
+  <h1>Admin Dashboard</h1>
+
+  <div class="cards">
+    <div class="card">
+      <h3>Total Reservations</h3>
+      <div class="value" id="totalReservations">0</div>
+    </div>
+    <div class="card">
+      <h3>Total Fees Collected</h3>
+      <div class="value" id="totalFees">$0</div>
+    </div>
+  </div>
+
+  <h2>Recent Bookings</h2>
+  <table id="recentBookings"></table>
+</div>
+
+
+<!-- 🔥 LOAD FIREBASE FIRST -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<!-- 🔥 YOUR FIREBASE CONFIG -->
+<script src="firebase.js"></script>
+
+<!-- 🔥 SECURITY SCRIPT -->
+<script src="security.js"></script>
+<script src="admin_shared.js"></script>
+
+<!-- 🔥 ACTIVATE ADMIN PROTECTION (AFTER Firebase is loaded) -->
+<script>
+    Security.protectAdminPage();
+</script>
+
+<script>
+
+
+function signOut() {
+  firebase.auth().signOut().then(() => {
+    window.location.href = "index.html";
+  });
+}
+
+function updateAdminNotifBadge(db) {
+  let el = document.getElementById("notif-badge");
+  if (!el) return;
+
+  db.collection("notifications")
+    .where("for", "==", "admin")
+    .onSnapshot(snapshot => {
+      let count = 0;
+      snapshot.forEach(doc => {
+        if (doc.data().status === "unread") count++;
+      });
+
+      el.textContent = count;
+      el.style.display = count === 0 ? "none" : "inline-block";
+    });
+}
+
+function loadDashboard(db) {
+  db.collection("bookings").onSnapshot(snapshot => {
+    let bookings = [];
+    snapshot.forEach(doc => bookings.push(doc.data()));
+
+    document.getElementById("totalReservations").textContent = bookings.length;
+
+    let totalFees = bookings
+      .filter(b => b.status === "accepted")
+      .reduce((sum, b) => sum + Number(b.total || 0), 0);
+
+    document.getElementById("totalFees").textContent = "$" + totalFees;
+
+    let table = document.getElementById("recentBookings");
+
+    if (bookings.length === 0) {
+      table.innerHTML = "<tr><td>No bookings yet.</td></tr>";
+      return;
+    }
+
+    let last = bookings.slice(-5).reverse();
+    table.innerHTML = `
+      <tr><th>User</th><th>Car</th><th>Start</th><th>End</th><th>Status</th></tr>
+      ${last.map(b => `
+        <tr>
+          <td>${b.email || b.user || "Unknown"}</td>
+          <td>${b.carName}</td>
+          <td>${b.start}</td>
+          <td>${b.end}</td>
+          <td><span class="status ${b.status}">${b.status}</span></td>
+        </tr>
+      `).join("")}
+    `;
+  });
+}
+
+// ⭐ THIS MUST BE OUTSIDE ALL FUNCTIONS
+firebase.auth().onAuthStateChanged(() => {
+  const db = firebase.firestore();
+  loadDashboard(db);
+  updateAdminNotifBadge(db);
+});
+</script>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin - Revenue</title>
+  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="theme.css">
+
+  <!-- Theme apply -->
+  <script>
+  (function() {
+    const theme = localStorage.getItem("adminTheme") || "default";
+    document.addEventListener("DOMContentLoaded", () => {
+      if (theme === "dark") document.body.classList.add("dark-mode");
+      if (theme === "light") document.body.classList.add("light-mode");
+    });
+  })();
+  </script>
+
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <!-- Your Firebase config -->
+  <script src="firebase.js"></script>
+
+  <!-- Security system -->
+  <script src="security.js"></script>
+<script src="admin_shared.js"></script>
+
+  <!-- Protect admin page AFTER Firebase loads -->
+  <script>
+      Security.protectAdminPage();
+  </script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <h2>Admin Panel</h2>
+
+  <a href="admin.html">Dashboard</a>
+  <a href="admin_bookings.html">Bookings</a>
+  <a href="admin_users.html">Users</a>
+  <a href="admin_cars.html">Cars</a>
+  <a href="admin_revenue.html" class="active">Revenue</a>
+  <a href="admin_settings.html">Settings</a>
+
+  <a href="admin_notifications.html" class="notif-btn">
+    <span class="notif-icon">🔔</span>
+    Notifications
+    <span id="notif-badge" class="notif-badge">0</span>
+  </a>
+
+  <a class="signout-btn" onclick="signOut()">Sign Out</a>
+</div>
+
+<!-- Main Content -->
+<div class="content">
+
+  <h1>Revenue</h1>
+
+  <div class="card" style="max-width:300px;">
+    <h3>Total Revenue (accepted bookings)</h3>
+    <div class="value" id="revTotal">$0</div>
+  </div>
+
+  <h2 style="margin-top: 30px;">Revenue Per Car</h2>
+
+  <div class="card" style="padding: 20px;">
+    <canvas id="revenueChart" height="120"></canvas>
+  </div>
+
+</div>
+
+<!-- Admin logic -->
+<script src="admin.js"></script>
+
+<script>
+function signOut() {
+  firebase.auth().signOut().then(() => {
+    localStorage.removeItem("loggedInUser");
+    window.location.href = "index.html";
+  });
+}
+
+function updateAdminNotifBadge() {
+  let el = document.getElementById("notif-badge");
+  if (!el) return;
+
+  let notifications = JSON.parse(localStorage.getItem("notifications")) || [];
+  let unread = notifications.filter(n => n.for === "admin" && n.status === "unread").length;
+
+  el.textContent = unread;
+  if (unread === 0) el.style.display = "none";
+}
+
+function loadRevenue() {
+  let bookings = JSON.parse(localStorage.getItem("bookings")) || [];
+
+  let accepted = bookings.filter(b => b.status === "accepted");
+
+  let total = accepted.reduce((sum, b) => sum + Number(b.total || 0), 0);
+  document.getElementById("revTotal").textContent = "$" + total;
+
+  let carRevenue = {};
+
+  accepted.forEach(b => {
+    let carName = b.carName || b.car || b.selectedCar || b.carModel;
+    if (!carName) return;
+
+    if (!carRevenue[carName]) carRevenue[carName] = 0;
+    carRevenue[carName] += Number(b.total || 0);
+  });
+
+  let labels = Object.keys(carRevenue);
+  let data = Object.values(carRevenue);
+
+  if (labels.length === 0) {
+    labels = ["No Data"];
+    data = [0];
+  }
+
+  new Chart(document.getElementById("revenueChart"), {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Revenue per Car",
+        data: data,
+        backgroundColor: "rgba(37, 99, 235, 0.6)",
+        borderColor: "#2563eb",
+        borderWidth: 2,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { color: "#12325b" }
+        },
+        x: {
+          ticks: { color: "#12325b" }
+        }
+      }
+    }
+  });
+}
+
+loadRevenue();
+updateAdminNotifBadge();
+</script>
+
+</body>
+</html>

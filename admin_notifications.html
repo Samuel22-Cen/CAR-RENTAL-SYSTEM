@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin - Notifications</title>
+  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="theme.css">
+
+  <!-- Theme apply -->
+  <script>
+  (function() {
+    const theme = localStorage.getItem("adminTheme") || "default";
+    document.addEventListener("DOMContentLoaded", () => {
+      if (theme === "dark") document.body.classList.add("dark-mode");
+      if (theme === "light") document.body.classList.add("light-mode");
+    });
+  })();
+  </script>
+
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <!-- Your Firebase config -->
+  <script src="firebase.js"></script>
+
+  <!-- Security system -->
+  <script src="security.js"></script>
+<script src="admin_shared.js"></script>
+
+  <style>
+    #notifTable {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    #notifTable th, #notifTable td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+
+    #notifTable th {
+      background: #1e3a8a;
+      color: white;
+    }
+
+    #notifTable tr:hover {
+      background: #f1f5f9;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="sidebar">
+  <h2>Admin Panel</h2>
+  <a href="admin.html">Dashboard</a>
+  <a href="admin_bookings.html">Bookings</a>
+  <a href="admin_users.html">Users</a>
+  <a href="admin_cars.html">Cars</a>
+  <a href="admin_revenue.html">Revenue</a>
+  <a href="admin_settings.html">Settings</a>
+
+  <a href="admin_notifications.html" class="notif-btn">
+    <span class="notif-icon">🔔</span>
+    Notifications
+    <span id="notif-badge" class="notif-badge">0</span>
+  </a>
+
+  <a class="signout-btn" onclick="signOut()">Sign Out</a>
+</div>
+
+<div class="content">
+  <h1>Notifications</h1>
+
+  <table id="notifTable">
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- ALL LOGIC GOES HERE (AFTER HTML) -->
+<script>
+firebase.auth().onAuthStateChanged(() => {
+  const db = firebase.firestore();
+
+  // Mark unread notifications as read ONLY when opening this page
+  db.collection("notifications")
+    .where("for", "==", "admin")
+    .where("status", "==", "unread")
+    .get()
+    .then(snapshot => {
+      snapshot.forEach(doc => {
+        db.collection("notifications").doc(doc.id).update({ status: "read" });
+      });
+    });
+
+  loadNotifications(db);
+  updateAdminNotifBadge(db);
+});
+
+function signOut() {
+  firebase.auth().signOut().then(() => {
+    localStorage.removeItem("loggedInUser");
+    window.location.href = "index.html";
+  });
+}
+
+function updateAdminNotifBadge(db) {
+  db.collection("notifications")
+    .where("for", "==", "admin")
+    .onSnapshot(snapshot => {
+      let el = document.getElementById("notif-badge");
+      if (!el) return;
+
+      let count = 0;
+      snapshot.forEach(doc => {
+        if (doc.data().status === "unread") count++;
+      });
+
+      el.textContent = count;
+      el.style.display = count === 0 ? "none" : "inline-block";
+    });
+}
+
+function loadNotifications(db) {
+  db.collection("notifications")
+    .where("for", "==", "admin")
+    .orderBy("createdAt", "desc")
+    .onSnapshot(snapshot => {
+
+      let table = document.querySelector("#notifTable tbody");
+      if (!table) return;
+
+      if (snapshot.empty) {
+        table.innerHTML = "<tr><td>No notifications.</td></tr>";
+        return;
+      }
+
+      let rows = `
+        <tr>
+          <th>Type</th>
+          <th>User</th>
+          <th>Car</th>
+          <th>Start</th>
+          <th>End</th>
+          <th>Status</th>
+        </tr>
+      `;
+
+      snapshot.forEach(doc => {
+        let n = doc.data();
+        rows += `
+          <tr>
+            <td>${n.type}</td>
+            <td>${n.userEmail}</td>
+            <td>${n.carName}</td>
+            <td>${n.start}</td>
+            <td>${n.end}</td>
+            <td>${n.status}</td>
+          </tr>
+        `;
+      });
+
+      table.innerHTML = rows;
+    });
+}
+</script>
+
+</body>
+</html>
+

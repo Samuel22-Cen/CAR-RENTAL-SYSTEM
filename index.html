@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="theme.css">
+   <script>
+  (function() {
+    const theme = localStorage.getItem("adminTheme") || "default";
+    document.addEventListener("DOMContentLoaded", () => {
+      if (theme === "dark") document.body.classList.add("dark-mode");
+      if (theme === "light") document.body.classList.add("light-mode");
+    });
+  })();
+  </script>
+
+<meta charset="UTF-8">
+<title>Sign In | Luxury Car Rentals</title>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+
+<!-- Your Firebase config -->
+<script src="firebase.js"></script>
+
+<style>
+/* GLOBAL */
+* { box-sizing: border-box; transition: 0.25s ease; }
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: linear-gradient(135deg, #007bff, #0056d6);
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* LOGIN BOX */
+.box {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 40px;
+  width: 380px;
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+  animation: fadeIn 0.6s ease;
+  text-align: center;
+}
+
+/* TITLE */
+.welcome-title {
+  font-size: 26px;
+  font-weight: 900;
+  color: white;
+  margin-bottom: 10px;
+  letter-spacing: 1px;
+}
+
+.box h2 {
+  color: #e8f1ff;
+  margin-bottom: 25px;
+  font-size: 20px;
+}
+
+/* ROLE BUTTONS */
+.role-select {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.role-btn {
+  width: 48%;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: bold;
+  color: white;
+}
+
+.admin-btn { background: #ff4d4d; }
+.customer-btn { background: #28a745; }
+
+.role-btn:hover { transform: scale(1.05); }
+
+/* INPUTS */
+input {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 6px;
+  border: none;
+  outline: none;
+  background: rgba(255, 255, 255, 0.35);
+  color: #003366;
+  font-size: 15px;
+}
+
+input::placeholder { color: #003366; opacity: 0.7; }
+
+button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 20px;
+  background: #2835a7;
+  border: none;
+  border-radius: 10px;
+  font-size: 17px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover { background: #218838; transform: scale(1.03); }
+
+/* LINK */
+.link {
+  margin-top: 12px;
+  color: #e8f1ff;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: underline;
+}
+
+/* RESET PASSWORD MINI TAB */
+.reset-tab {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 360px;
+  transform: translate(-50%, -50%);
+  background: rgba(255,255,255,0.25);
+  backdrop-filter: blur(12px);
+  border-radius: 14px;
+  padding: 25px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+  display: none;
+  animation: slideUp 0.4s ease;
+  z-index: 999;
+}
+
+.reset-title {
+  color: white;
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.reset-btn { background: #007bff; }
+.reset-btn:hover { background: #0056d6; }
+
+.close-reset {
+  margin-top: 12px;
+  text-align: center;
+  color: #e8f1ff;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: underline;
+}
+
+/* ANIMATIONS */
+@keyframes slideUp {
+  from { transform: translate(-50%, -40%); opacity: 0; }
+  to { transform: translate(-50%, -50%); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+  <h1 class="welcome-title">Luxury Car Rentals</h1>
+  <h2>Sign In</h2>
+
+  <div class="role-select">
+    <button class="role-btn admin-btn" onclick="selectRole('admin')">Admin</button>
+    <button class="role-btn customer-btn" onclick="selectRole('customer')">Customer</button>
+  </div>
+
+  <div id="form"></div>
+</div>
+
+<!-- RESET PASSWORD MINI TAB -->
+<div id="resetTab" class="reset-tab">
+  <div class="reset-title">Reset Password</div>
+
+  <input id="resetEmail" type="email" placeholder="Enter your email">
+
+  <button class="reset-btn" onclick="sendResetEmail()">Send Reset Email</button>
+
+  <div class="close-reset" onclick="closeReset()">Close</div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  let selectedRole = "customer";
+
+  window.selectRole = function(role) {
+    selectedRole = role;
+
+    if (role === "admin") {
+      document.getElementById("form").innerHTML = `
+        <input id="email" type="email" placeholder="Admin Email">
+        <input id="password" type="password" placeholder="Password">
+        <button onclick="login()">Sign In</button>
+      `;
+    }
+
+    if (role === "customer") {
+      document.getElementById("form").innerHTML = `
+        <input id="email" type="email" placeholder="Email">
+        <input id="password" type="password" placeholder="Password">
+        <button onclick="login()">Sign In</button>
+        <div class="link" onclick="showRegister()">New here? Register</div>
+        <div class="link" onclick="openReset()">Forgot Password?</div>
+      `;
+    }
+  };
+
+  window.openReset = () => {
+    document.getElementById("resetTab").style.display = "block";
+  };
+
+  window.closeReset = () => {
+    document.getElementById("resetTab").style.display = "none";
+  };
+
+  window.sendResetEmail = function() {
+  const email = document.getElementById("resetEmail").value.trim();
+  
+  if (!email) {
+    alert("Please enter your email address.");
+    return;
+  }
+
+  auth.sendPasswordResetEmail(email)
+    .then(() => {
+      alert("✅ Password reset email sent! Check your inbox.");
+      closeReset();
+    })
+    .catch(err => {
+      if (err.code === "auth/user-not-found") {
+        alert("No account found with this email.");
+      } else if (err.code === "auth/invalid-email") {
+        alert("Please enter a valid email address.");
+      } else {
+        alert(err.message);
+      }
+    });
+};
+  window.showRegister = function() {
+    document.getElementById("form").innerHTML = `
+      <input id="regName" placeholder="Full Name">
+      <input id="regEmail" type="email" placeholder="Email">
+      <input id="regPass" type="password" placeholder="Password">
+      <button onclick="register()">Register</button>
+      <div class="link" onclick="selectRole('customer')">Back to Login</div>
+    `;
+  };
+
+  window.register = function() {
+    const name = document.getElementById("regName").value;
+    const email = document.getElementById("regEmail").value;
+    const pass = document.getElementById("regPass").value;
+
+    auth.createUserWithEmailAndPassword(email, pass)
+      .then(async (cred) => {
+        await db.collection("users").doc(cred.user.uid).set({
+          name: name,
+          email: email,
+          role: "customer"
+        });
+        alert("Registration successful!");
+        selectRole("customer");
+      })
+      .catch(err => alert(err.message));
+  };
+
+  window.login = function() {
+    const email = document.getElementById("email").value;
+    const pass = document.getElementById("password").value;
+
+    auth.signInWithEmailAndPassword(email, pass)
+      .then(async (cred) => {
+        const uid = cred.user.uid;
+        const userDoc = await db.collection("users").doc(uid).get();
+        const user = userDoc.data();
+
+        if (!user) {
+          alert("User record missing in Firestore.");
+          return;
+        }
+
+        localStorage.setItem("loggedInUser", JSON.stringify({
+          uid: uid,
+          email: user.email,
+          name: user.name,
+          role: user.role
+        }));
+
+        if (user.role === "admin") {
+          window.location.href = "admin.html";
+        } else {
+          window.location.href = "customer.html";
+        }
+      })
+      .catch(err => alert(err.message));
+  };
+
+  selectRole("customer");
+});
+</script>
+
+
+
+</body>
+</html>

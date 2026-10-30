@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="theme.css">
+     <script>
+  (function() {
+    const theme = localStorage.getItem("adminTheme") || "default";
+    document.addEventListener("DOMContentLoaded", () => {
+      if (theme === "dark") document.body.classList.add("dark-mode");
+      if (theme === "light") document.body.classList.add("light-mode");
+    });
+  })();
+  </script>
+  
+  <title>Notifications</title>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <!-- Your Firebase config -->
+  <script src="firebase.js"></script>
+
+  <!-- Security system -->
+  <script src="security.js"></script>
+
+  <!-- Protect customer page -->
+  <script>
+      Security.protectCustomerPage();
+  </script>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #f3f4f6;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    h1 {
+      color: #1e3a8a;
+      margin-bottom: 20px;
+    }
+
+    .notif-card {
+      background: white;
+      padding: 15px;
+      margin-bottom: 12px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .notif-time {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 5px;
+      display: block;
+    }
+
+    .delete-btn {
+      background: #dc2626;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .delete-btn:hover {
+      background: #b91c1c;
+    }
+
+    .back-container {
+      margin-top: auto;
+      display: flex;
+      justify-content: center;
+      padding-top: 20px;
+    }
+
+    .back-btn {
+      background: #1e3a8a;
+      color: white;
+      padding: 12px 22px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transition: 0.2s ease;
+    }
+
+    .back-btn:hover {
+      background: #274bb8;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>Your Notifications</h1>
+<div id="notificationsList"></div>
+
+<div class="back-container">
+  <a href="customer.html" class="back-btn">⬅ Back to Dashboard</a>
+</div>
+
+<script>
+const loggedUser = JSON.parse(localStorage.getItem("loggedInUser"));
+
+if (!loggedUser || !loggedUser.email) {
+  alert("Please sign in first.");
+  window.location.href = "index.html";
+}
+
+function loadCustomerNotifications() {
+  let container = document.getElementById("notificationsList");
+
+  db.collection("notifications")
+    .where("userEmail", "==", loggedUser.email)
+    .onSnapshot(snapshot => {
+      container.innerHTML = "";
+
+      if (snapshot.empty) {
+        container.innerHTML = "<p>No notifications yet.</p>";
+        return;
+      }
+
+      snapshot.forEach(doc => {
+        let n = doc.data();
+        let id = doc.id;
+
+        if (n.for !== "customer") return;
+
+        container.innerHTML += `
+          <div class="notif-card">
+            <p>${n.message || "Notification"}</p>
+            <span class="notif-time">${n.createdAt ? new Date(n.createdAt).toLocaleString() : ""}</span>
+            <button class="delete-btn" onclick="deleteNotification('${id}')">Delete</button>
+          </div>
+        `;
+      });
+
+      setTimeout(() => {
+        snapshot.forEach(doc => {
+          if (doc.data().status === "unread" && doc.data().for === "customer") {
+            db.collection("notifications").doc(doc.id).update({ status: "read" });
+          }
+        });
+      }, 2000);
+    });
+}
+
+function deleteNotification(id) {
+  db.collection("notifications").doc(id).delete();
+}
+
+loadCustomerNotifications();
+</script>
+
+</body>
+</html>

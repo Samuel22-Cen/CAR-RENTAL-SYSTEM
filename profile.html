@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Profile</title>
+
+  <!-- Load Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <!-- Your Firebase config -->
+  <script src="firebase.js"></script>
+
+  <!-- Security system -->
+  <script src="security.js"></script>
+
+  <!-- Protect page -->
+  <script>
+      Security.requireLogin();
+  </script>
+
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { text-align: center; }
+    .booking { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+  </style>
+</head>
+
+<body>
+  <h1>My Profile</h1>
+
+  <div id="userInfo"></div>
+
+  <h2>Booking History</h2>
+  <div id="history"></div>
+
+  <h2>Loyalty Points</h2>
+  <div id="points"></div>
+
+  <script>
+    // Get logged-in user from localStorage
+    let user = JSON.parse(localStorage.getItem("loggedInUser"));
+
+    if (!user) {
+      alert("Please sign in first.");
+      window.location.href = "index.html";
+    }
+
+    // Display user info
+    document.getElementById("userInfo").innerHTML = `
+      <p><strong>Name:</strong> ${user.name}</p>
+      <p><strong>Email:</strong> ${user.email}</p>
+    `;
+
+    // Load booking history from localStorage
+    let bookings = JSON.parse(localStorage.getItem("bookings")) || [];
+    let userBookings = bookings.filter(b => b.email === user.email);
+
+    if (userBookings.length === 0) {
+      document.getElementById("history").innerHTML = "<p>No bookings yet.</p>";
+    } else {
+      userBookings.forEach(b => {
+        let div = document.createElement("div");
+        div.className = "booking";
+        div.innerHTML = `
+          <strong>${b.car}</strong><br>
+          ${b.start} to ${b.end}<br>
+          Fee: $${b.total}<br>
+          Status: ${b.status}
+        `;
+        document.getElementById("history").appendChild(div);
+      });
+    }
+
+    // Loyalty points (placeholder)
+    let points = userBookings.filter(b => b.status === "accepted").length * 10;
+
+    document.getElementById("points").innerHTML = `
+      <p>You have <strong>${points}</strong> loyalty points.</p>
+      <p>Earn 10 points for every completed booking!</p>
+    `;
+  </script>
+
+</body>
+</html>
+

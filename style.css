@@ -1,0 +1,80 @@
+body{
+font-family: Arial;
+
+}
+
+.car{
+border:1px solid black;
+padding:10px;
+margin:10px;
+display:inline-block;
+}
+.menu-dots {
+  float: right;
+  position: relative;
+  width: 30px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.menu-dots .dot {
+  width: 6px;
+  height: 6px;
+  background: white;   /* <-- FIXED */
+  border-radius: 50%;
+  margin: 4px auto;
+}
+
+.menu-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  background: white;
+  min-width: 140px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  border-radius: 6px;
+  z-index: 10;
+}
+
+.menu-content a {
+  display: block;
+  padding: 10px;
+  color: #333;
+  text-decoration: none;
+}
+
+.menu-content a:hover {
+  background: #f1f1f1;
+}
+
+.menu-dots:hover .menu-content {
+  display: block;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left; /* override body center */
+  padding: 10px;
+}
+header {
+  background: #1e90ff; /* or whatever blue you use */
+  height: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+}
+.menu-dots .dot {
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+  margin: 3px auto;
+}
